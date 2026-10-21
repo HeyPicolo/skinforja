@@ -18,6 +18,7 @@ import { Gallery, applyTemplate } from './components/Gallery';
 import { ExportDialog } from './components/ExportDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
 import { HelpDialog, Onboarding } from './components/HelpDialogs';
+import { KidApp } from './kid/KidApp';
 
 function useTheme() {
   const theme = useApp((s) => s.theme);
@@ -37,6 +38,7 @@ export async function importFile(file: File) {
   try {
     const r = await importSkinFile(file);
     doc.replaceAll(r.pixels, r.model, 'Importar skin');
+    doc.setOriginal();
     const name = file.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Skin importada';
     app.set({ skinName: name, projectId: null, modal: null });
     const extra = r.converted ? ' Formato antigo 64×32 convertido para 64×64.' : r.model === 'slim' ? ' Braços slim detectados.' : '';
@@ -78,6 +80,7 @@ function Header({ onImport }: { onImport: () => void }) {
         </button>
       </div>
       <nav className="actions" aria-label="Arquivo">
+        <button type="button" className="btn kid-switch" onClick={() => set({ mode: 'kid', tool: 'brush', size: 2 })}><Icon name="walk" /><span>Modo infantil</span></button>
         <button type="button" className="btn" onClick={() => set({ modal: 'gallery' })}><Icon name="gallery" /><span>Modelos</span></button>
         <button type="button" className="btn" onClick={() => set({ modal: 'projects' })}><Icon name="folder" /><span>Minhas skins</span></button>
         <button type="button" className="btn" onClick={onImport}><Icon name="upload" /><span>Importar</span></button>
@@ -179,36 +182,47 @@ const VIEW_OPTS: { id: ViewMode; label: string; icon: string }[] = [
   { id: 'both', label: 'Ambos', icon: 'split' },
 ];
 
+/** Raiz: carrega o trabalho salvo e escolhe entre o modo infantil e o editor avançado. */
 export function App() {
-  const modal = useApp((s) => s.modal);
-  const view = useApp((s) => s.view);
-  const panelOpen = useApp((s) => s.panelOpen);
+  const mode = useApp((s) => s.mode);
   const set = useApp((s) => s.set);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
   const [ready, setReady] = useState(false);
-
-  useShortcuts();
 
   useEffect(() => {
     prefetchDownloads();
     (async () => {
       const restored = await restoreAutosave();
       if (!restored) {
-        const t = templateById('aventureiro')!;
+        const t = templateById(useApp.getState().mode === 'kid' ? 'raposa' : 'aventureiro')!;
         doc.load(t.draw(), t.model);
-        set({ skinName: 'Aventureiro (meu)' });
+        doc.setOriginal();
+        set({ skinName: t.name + ' (meu)' });
       }
       startAutosave();
       setReady(true);
-      if (!lsGet('onboarded', false)) set({ modal: 'onboarding' });
     })();
   }, [set]);
 
-  // em telas estreitas começa só com o 3D
+  // o modo infantil começa só com o 3D; o avançado mostra os dois lados em telas largas
   useEffect(() => {
-    if (window.matchMedia('(max-width: 760px)').matches) set({ view: '3d' });
-  }, [set]);
+    set({ view: mode === 'kid' || window.matchMedia('(max-width: 760px)').matches ? '3d' : 'both', modal: null, hover: null });
+    if (mode === 'pro' && !lsGet('onboarded', false)) set({ modal: 'onboarding' });
+  }, [mode, set]);
+
+  if (!ready) return <div className="boot" aria-busy="true" />;
+  return mode === 'kid' ? <KidApp /> : <ProApp />;
+}
+
+function ProApp() {
+  const modal = useApp((s) => s.modal);
+  const view = useApp((s) => s.view);
+  const panelOpen = useApp((s) => s.panelOpen);
+  const set = useApp((s) => s.set);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const ready = true;
+
+  useShortcuts();
 
   const openImport = useCallback(() => fileRef.current?.click(), []);
 

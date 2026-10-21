@@ -5,8 +5,8 @@ import { doc } from '../skin/document';
 import { useApp } from '../store';
 import { Dialog } from './Dialog';
 
-const pixelCache = new Map<string, Uint32Array>();
-function pixelsOf(t: Template) {
+export const pixelCache = new Map<string, Uint32Array>();
+export function pixelsOf(t: Template) {
   let p = pixelCache.get(t.id);
   if (!p) { p = t.draw(); pixelCache.set(t.id, p); }
   return p;
@@ -14,12 +14,13 @@ function pixelsOf(t: Template) {
 
 export function applyTemplate(t: Template) {
   doc.replaceAll(pixelsOf(t), t.model, `Modelo: ${t.name}`);
+  doc.setOriginal();
   const app = useApp.getState();
   app.set({ skinName: t.id === 'branco' || t.id === 'neutra' ? 'Minha skin' : `${t.name} (meu)`, projectId: null, modal: null });
   app.showToast(`Modelo "${t.name}" aplicado.`, { label: 'Desfazer', run: () => doc.undo() });
 }
 
-function Thumb({ t }: { t: Template }) {
+export function Thumb({ t }: { t: Template }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;

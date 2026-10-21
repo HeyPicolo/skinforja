@@ -91,7 +91,7 @@ export function buildCharacter(texture: THREE.Texture, model: ArmModel): Charact
   };
 }
 
-export type Pose = 'idle' | 'walk' | 'still';
+export type Pose = 'idle' | 'walk' | 'still' | 'dance';
 
 /** Anima a pose no tempo t (segundos). */
 export function applyPose(rig: CharacterRig, pose: Pose, t: number) {
@@ -103,6 +103,17 @@ export function applyPose(rig: CharacterRig, pose: Pose, t: number) {
     p.rightArm.rotation.z = -0.05 - s;
     p.leftArm.rotation.z = 0.05 + s;
     p.head.rotation.y = Math.sin(t * 0.5) * 0.12;
+    return;
+  }
+  if (pose === 'dance') {
+    const b = Math.sin(t * 7);
+    p.rightArm.rotation.z = -2.4 - b * 0.5;
+    p.leftArm.rotation.z = 2.4 - b * 0.5;
+    p.rightArm.rotation.x = Math.sin(t * 3.5) * 0.3;
+    p.leftArm.rotation.x = -Math.sin(t * 3.5) * 0.3;
+    p.head.rotation.z = b * 0.15;
+    p.rightLeg.rotation.x = Math.max(0, b) * 0.5;
+    p.leftLeg.rotation.x = Math.max(0, -b) * 0.5;
     return;
   }
   const w = Math.sin(t * 5.5) * 0.65;

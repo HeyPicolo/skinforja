@@ -5,13 +5,47 @@ import { doc, pack, unpack } from '../skin/document';
 import { buildCharacter, applyPose, hitToPixel, type CharacterRig, type PartMesh } from '../skin/model3d';
 import { beginPaint, movePaint, endPaint, isPainting } from '../skin/paint';
 import { footprint } from '../skin/preview';
-import { SKIN_SIZE, type Rect } from '../skin/layout';
+import { SKIN_SIZE, type Layer, type Rect } from '../skin/layout';
 import { useApp } from '../store';
 import { Icon } from './Icon';
 
 const TARGET = new THREE.Vector3(0, 16, 0);
 
-export function Viewer3D() {
+/** Controles da câmera acessíveis por botões externos (modo infantil). */
+export const viewerControls = {
+  rotate: (_dir: number) => {},
+  zoom: (_f: number) => {},
+  front: () => {},
+};
+
+/** Bloco de grama em pixel art embaixo do personagem. */
+function grassBlock(): THREE.Mesh {
+  const mk = (top: boolean) => {
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const g = c.getContext('2d')!;
+    let seed = top ? 3 : 9;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let y = 0; y < 16; y++)
+      for (let x = 0; x < 16; x++) {
+        const r = rnd();
+        if (top) g.fillStyle = r < 0.3 ? '#5f9e3a' : r < 0.6 ? '#6cb043' : r < 0.9 ? '#78bd4c' : '#8acb5a';
+        else if (y < 3 + (x % 3 === 0 ? 1 : 0)) g.fillStyle = r < 0.5 ? '#6cb043' : '#5f9e3a';
+        else g.fillStyle = r < 0.3 ? '#7a5332' : r < 0.6 ? '#8b6040' : r < 0.85 ? '#966b48' : '#6b4a2c';
+        g.fillRect(x, y, 1, 1);
+      }
+    const t = new THREE.CanvasTexture(c);
+    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshLambertMaterial({ map: t });
+  };
+  const side = mk(false), top = mk(true);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 16), [side, side, top, side, side, side]);
+  m.position.y = -8.01;
+  return m;
+}
+
+export function Viewer3D({ kid = false }: { kid?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const api = useRef<{ front: () => void; back: () => void; spin: (v: boolean) => void } | null>(null);
   const [spinning, setSpinning] = useState(false);
@@ -22,6 +56,7 @@ export function Viewer3D() {
 
   useEffect(() => {
     const host = hostRef.current!;
+    const target = kid ? new THREE.Vector3(0, 11, 0) : TARGET.clone();
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -30,7 +65,7 @@ export function Viewer3D() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 1, 500);
-    camera.position.set(28, 30, 52);
+    camera.position.set(kid ? 26 : 28, kid ? 24 : 30, kid ? 72 : 52);
     scene.add(new THREE.AmbientLight(0xffffff, 1.9));
     const sun = new THREE.DirectionalLight(0xffffff, 1.35);
     sun.position.set(20, 40, 35);
@@ -48,8 +83,9 @@ export function Viewer3D() {
       g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
       return new THREE.CanvasTexture(c);
     })();
+    if (kid) scene.add(grassBlock());
     const shadow = new THREE.Mesh(new THREE.PlaneGeometry(22, 14), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
-    shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.05;
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = kid ? 0.02 : -0.05;
     scene.add(shadow);
 
     const texCanvas = document.createElement('canvas');
@@ -102,7 +138,7 @@ export function Viewer3D() {
     upload();
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.copy(TARGET);
+    controls.target.copy(target);
     controls.enableDamping = true;
     controls.dampingFactor = 0.12;
     controls.minDistance = 22;
@@ -114,18 +150,25 @@ export function Viewer3D() {
     // ---------- pintura por raycast ----------
     const ray = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
-    const castAt = (e: PointerEvent): { x: number; y: number; rect: Rect } | null => {
+    let strokeLayer: Layer | null = null;
+    // no modo infantil pinta "o que se vê": a camada externa onde ela tem cor, senão a base
+    const castAt = (e: PointerEvent): { x: number; y: number; rect: Rect; layer: Layer } | null => {
       if (!rig) return null;
       const r = renderer.domElement.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
       const s = useApp.getState();
-      const targets = rig.meshes.filter((m) => m.mesh.visible && m.layer === s.activeLayer);
+      const only: Layer | null = kid ? strokeLayer : s.activeLayer;
+      const targets = rig.meshes.filter((m) => m.mesh.visible && (!only || m.layer === only));
       const hits = ray.intersectObjects(targets.map((m) => m.mesh), false);
-      const hit = hits.find((h) => h.uv && h.faceIndex != null);
-      if (!hit) return null;
-      const pm = targets.find((m) => m.mesh === hit.object) as PartMesh;
-      return hitToPixel(pm, hit.uv!, hit.faceIndex!);
+      for (const hit of hits) {
+        if (!hit.uv || hit.faceIndex == null) continue;
+        const pm = targets.find((m) => m.mesh === hit.object) as PartMesh;
+        const px = hitToPixel(pm, hit.uv, hit.faceIndex);
+        if (kid && !only && pm.layer === 'overlay' && doc.px[px.y * SKIN_SIZE + px.x] >>> 24 === 0) continue;
+        return { ...px, layer: pm.layer };
+      }
+      return null;
     };
 
     let paintingPointer: number | null = null;
@@ -138,15 +181,17 @@ export function Viewer3D() {
         return;
       }
       const s = useApp.getState();
-      if (e.button !== 0 || !s.paint3d) return;
+      if (e.button !== 0 || (!s.paint3d && !kid)) return;
+      strokeLayer = null;
       const hit = castAt(e);
       if (!hit) return;
+      strokeLayer = hit.layer;
       controls.enabled = false;
       paintingPointer = e.pointerId;
       renderer.domElement.setPointerCapture(e.pointerId);
       set({ hover: null });
       beginPaint(hit.x, hit.y, hit.rect, { alt: e.altKey, shift: e.shiftKey });
-      if (!isPainting()) { paintingPointer = null; controls.enabled = true; }
+      if (!isPainting()) { paintingPointer = null; controls.enabled = true; strokeLayer = null; }
     };
     const onMove = (e: PointerEvent) => {
       if (paintingPointer === e.pointerId) {
@@ -154,7 +199,7 @@ export function Viewer3D() {
         if (hit) movePaint(hit.x, hit.y, hit.rect);
         return;
       }
-      if (e.pointerType !== 'mouse' || e.buttons !== 0) return;
+      if (e.pointerType !== 'mouse' || e.buttons !== 0 || kid) return;
       const s = useApp.getState();
       if (!s.paint3d) { if (s.hover?.src === '3d') set({ hover: null }); return; }
       const hit = castAt(e);
@@ -167,6 +212,7 @@ export function Viewer3D() {
       if (paintingPointer === e.pointerId) {
         endPaint();
         paintingPointer = null;
+        strokeLayer = null;
         controls.enabled = true;
       }
     };
@@ -205,6 +251,7 @@ export function Viewer3D() {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf = 0;
     let spin = false;
+    let rotStep = () => {};
     let last = performance.now();
     let t = 0;
     const loop = () => {
@@ -215,10 +262,11 @@ export function Viewer3D() {
       if (!isPainting()) t += dt;
       if (rig) applyPose(rig, reduce ? 'still' : useApp.getState().pose, t);
       if (spin && !isPainting()) {
-        const off = camera.position.clone().sub(TARGET);
+        const off = camera.position.clone().sub(target);
         off.applyAxisAngle(new THREE.Vector3(0, 1, 0), dt * 0.6);
-        camera.position.copy(TARGET).add(off);
+        camera.position.copy(target).add(off);
       }
+      rotStep();
       controls.update();
       renderer.render(scene, camera);
     };
@@ -226,8 +274,25 @@ export function Viewer3D() {
 
     const placeCamera = (z: number) => {
       camera.position.set(0, 22, z);
-      controls.target.copy(TARGET);
+      controls.target.copy(target);
       controls.update();
+    };
+    let rotTarget = 0;
+    viewerControls.rotate = (dir) => { rotTarget += dir * Math.PI / 4; };
+    viewerControls.zoom = (f) => {
+      const off = camera.position.clone().sub(target);
+      const len = Math.max(controls.minDistance, Math.min(controls.maxDistance, off.length() * f));
+      camera.position.copy(target).add(off.setLength(len));
+      controls.update();
+    };
+    viewerControls.front = () => placeCamera(kid ? 76 : 58);
+    rotStep = () => {
+      if (Math.abs(rotTarget) < 0.001) return;
+      const step = Math.sign(rotTarget) * Math.min(Math.abs(rotTarget), 0.12);
+      rotTarget -= step;
+      const off = camera.position.clone().sub(target);
+      off.applyAxisAngle(new THREE.Vector3(0, 1, 0), step);
+      camera.position.copy(target).add(off);
     };
     api.current = {
       front: () => placeCamera(58),
@@ -245,10 +310,11 @@ export function Viewer3D() {
       renderer.dispose();
       el.remove();
     };
-  }, [set]);
+  }, [set, kid]);
 
   return (
-    <div className="viewer3d" ref={hostRef} data-paint={paint3d ? 'on' : 'off'}>
+    <div className="viewer3d" ref={hostRef} data-paint={paint3d || kid ? 'on' : 'off'}>
+      {!kid && <>
       <div className="viewer-tools" role="toolbar" aria-label="Controles da visualização 3D">
         <button type="button" className="chip" onClick={() => api.current?.front()} title="Ver de frente">Frente</button>
         <button type="button" className="chip" onClick={() => api.current?.back()} title="Ver de costas">Costas</button>
@@ -267,6 +333,7 @@ export function Viewer3D() {
           ? (paint3d ? 'Toque no boneco para pintar · arraste no fundo para girar · pinça para aproximar' : 'Arraste para girar · pinça para aproximar')
           : (paint3d ? 'Clique no boneco para pintar · arraste no fundo para girar · role para aproximar' : 'Arraste para girar · role para aproximar')}
       </p>
+      </>}
     </div>
   );
 }

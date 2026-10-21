@@ -65,6 +65,10 @@ export class SkinDoc {
   readonly px = new Uint32Array(this.data.buffer);
   model: ArmModel = 'classic';
   rev = 0;
+  /** Pixels de partida (modelo escolhido, skin importada) usados pela borracha que "volta ao original". */
+  original: Uint32Array | null = null;
+
+  setOriginal(px?: Uint32Array) { this.original = (px ?? this.px).slice(); }
   private undoStack: HistoryEntry[] = [];
   private redoStack: HistoryEntry[] = [];
   private listeners = new Set<Listener>();

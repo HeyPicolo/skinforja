@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles.css';
+import './kid/kid.css';
 import { doc } from './skin/document';
 import { useApp } from './store';
 

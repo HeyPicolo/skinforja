@@ -15,7 +15,20 @@ npm run typecheck
 
 Para publicar em qualquer hospedagem estática (Vercel, Netlify, GitHub Pages), use a pasta `dist/` gerada por `npm run build`.
 
-## O que tem
+## Modo infantil (padrão)
+
+Feito para crianças pequenas que ainda não leem, usando iPad:
+
+- Tudo por figuras grandes; cada botão **fala o próprio nome** (voz em português) e faz um som.
+- Pinta tocando direto no boneco, que fica em cima de um bloco de grama. Pinta "o que se vê": se tem roupa por cima, pinta a roupa.
+- Ferramentas: pincel (3 tamanhos), balde (tolerante às texturas), carimbos (coração, estrela, olhos, sorriso, flor, raio, bolinhas, quadrado), purpurina, borracha (volta à cor original do modelo) e pegar cor. Borboleta = espelho.
+- Giz de cera com 18 cores + arco-íris com mais 72 cores.
+- Botões para girar, aproximar, ver o mapa 2D e fazer o boneco dançar.
+- Coração guarda a skin (com confete). A galeria abre por figuras: patinha, monstro, pessoa, coração (minhas skins) e folha em branco.
+- **Área dos adultos**: segure o cadeado por 2 segundos. Lá ficam exportar (PNG/.mcpack), importar, gerenciar skins guardadas, som, voz, modelo do braço e o editor avançado.
+- No iPad, use "Compartilhar › Adicionar à Tela de Início" para abrir em tela cheia como um app.
+
+## Editor avançado
 
 - **Editor**: boneco 3D (girar, zoom, pintar direto no modelo) ao lado do mapa 2D da textura 64×64 com grade, zoom e contorno de cada face. Mostrar/ocultar partes do corpo e as camadas Base/Externa. Prévia parado ou andando.
 - **Ferramentas**: lápis, pincel (1–8 px), borracha, balde (fica dentro da face), conta-gotas (ou Alt+clique), textura (variação de tom), clarear, escurecer, linha e retângulo (Shift = preenchido). Modo espelho. Desfazer/refazer ilimitados.

@@ -3,7 +3,7 @@ import { pack, unpack, shade, TRANSPARENT, type RGBA, type Stroke, type Packed }
 
 export type ToolId =
   | 'pencil' | 'brush' | 'eraser' | 'fill' | 'picker'
-  | 'noise' | 'lighten' | 'darken' | 'line' | 'rect';
+  | 'noise' | 'lighten' | 'darken' | 'line' | 'rect' | 'stamp';
 
 export interface ToolDef { id: ToolId; label: string; key: string; hint: string }
 
@@ -31,7 +31,29 @@ export interface PaintOptions {
   model: ArmModel;
   noise: number; // 0..0.4
   filledRect?: boolean;
+  /** Borracha "volta ao original": na base restaura estes pixels em vez de deixar transparente. */
+  restore?: Uint32Array | null;
+  stamp?: StampId;
+  /** Balde: diferença de cor aceita (soma |ΔR|+|ΔG|+|ΔB|, e alfa precisa ser parecido). 0 = cor exata. */
+  tolerance?: number;
 }
+
+// ---------- carimbos ----------
+export type StampId = 'heart' | 'star' | 'eyes' | 'smile' | 'flower' | 'bolt' | 'dots' | 'square';
+
+export interface StampDef { id: StampId; label: string; rows: string[]; legend: Record<string, string> }
+
+/** 'c' = cor escolhida; as outras letras têm cor fixa. */
+export const STAMPS: StampDef[] = [
+  { id: 'heart', label: 'Coração', rows: ['.c.c.', 'ccccc', 'ccccc', '.ccc.', '..c..'], legend: {} },
+  { id: 'star', label: 'Estrela', rows: ['..c..', '.ccc.', 'ccccc', '.ccc.', '.c.c.'], legend: {} },
+  { id: 'eyes', label: 'Olhos', rows: ['wk..kw'], legend: { w: '#ffffff', k: '#1b1b1f' } },
+  { id: 'smile', label: 'Sorriso', rows: ['k....k', '.kkkk.'], legend: { k: '#4a2a22' } },
+  { id: 'flower', label: 'Flor', rows: ['.c.', 'cyc', '.c.'], legend: { y: '#ffd23f' } },
+  { id: 'bolt', label: 'Raio', rows: ['..cc', '.cc.', 'cccc', '.cc.', 'cc..'], legend: {} },
+  { id: 'dots', label: 'Bolinhas', rows: ['c.c.', '....', '.c.c', '....', 'c.c.'], legend: {} },
+  { id: 'square', label: 'Quadrado', rows: ['ccc', 'ccc', 'ccc'], legend: {} },
+];
 
 const idx = (x: number, y: number) => y * SKIN_SIZE + x;
 
@@ -39,10 +61,19 @@ function inside(r: Rect | null, x: number, y: number) {
   return !r || (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h);
 }
 
+const ERASE_BASE = pack({ r: 229, g: 231, b: 235, a: 255 });
+
 /** Calcula a cor final de um pixel para a ferramenta, a partir do valor original. */
-function colorFor(o: PaintOptions, original: Packed): Packed | null {
+function colorFor(o: PaintOptions, original: Packed, i = -1): Packed | null {
   switch (o.tool) {
-    case 'eraser': return TRANSPARENT;
+    case 'eraser': {
+      if (!o.restore || i < 0) return TRANSPARENT;
+      const L = layout(o.model);
+      const own = L.owner[i];
+      if (own < 0 || L.infos[own].layer === 'overlay') return TRANSPARENT;
+      const r = o.restore[i];
+      return r >>> 24 === 0 ? ERASE_BASE : r;
+    }
     case 'lighten':
     case 'darken': {
       const c = unpack(original);
@@ -63,18 +94,18 @@ export function plot(s: Stroke, o: PaintOptions, x: number, y: number, fixed?: P
   const once = o.tool === 'lighten' || o.tool === 'darken' || o.tool === 'noise';
   const apply = (i: number, color?: Packed | null) => {
     if (once && s.touched(i)) return;
-    const c = color !== undefined ? color : colorFor(o, s.original(i));
+    const c = color !== undefined ? color : colorFor(o, s.original(i), i);
     if (c === null || c === undefined) return;
     s.set(i, c);
   };
   const i = idx(x, y);
-  const c = fixed !== undefined ? fixed : colorFor(o, s.original(i));
+  const c = fixed !== undefined ? fixed : colorFor(o, s.original(i), i);
   if (!(once && s.touched(i)) && c !== null) s.set(i, c);
   if (o.mirror) {
     const m = mirrorIndex(o.model, i);
     if (m >= 0 && m !== i) {
       // textura usa a mesma cor sorteada para ficar simétrica; clarear/escurecer calcula do original
-      apply(m, o.tool === 'noise' ? c : undefined);
+      apply(m, o.tool === 'noise' || fixed !== undefined ? c : undefined);
     }
   }
 }
@@ -136,6 +167,15 @@ export function floodFill(s: Stroke, o: PaintOptions, x: number, y: number) {
   const target = s.get(idx(x, y));
   const color = pack(o.color);
   if (target === color && !o.mirror) return;
+  const tol = o.tolerance ?? 0;
+  const t = unpack(target);
+  const same = (p: Packed) => {
+    if (p === target) return true;
+    if (!tol) return false;
+    const c = unpack(p);
+    if ((c.a === 0) !== (t.a === 0)) return false;
+    return Math.abs(c.r - t.r) + Math.abs(c.g - t.g) + Math.abs(c.b - t.b) <= tol;
+  };
   const seen = new Uint8Array(SKIN_SIZE * SKIN_SIZE);
   const stack = [x, y];
   const pts: number[] = [];
@@ -143,7 +183,7 @@ export function floodFill(s: Stroke, o: PaintOptions, x: number, y: number) {
     const py = stack.pop()!, px = stack.pop()!;
     if (!inside(rect, px, py)) continue;
     const i = idx(px, py);
-    if (seen[i] || s.get(i) !== target) continue;
+    if (seen[i] || !same(s.get(i))) continue;
     seen[i] = 1;
     pts.push(px, py);
     stack.push(px + 1, py, px - 1, py, px, py + 1, px, py - 1);
@@ -155,4 +195,35 @@ export function pickColor(px: Uint32Array, x: number, y: number): RGBA | null {
   if (x < 0 || y < 0 || x >= SKIN_SIZE || y >= SKIN_SIZE) return null;
   const c = unpack(px[idx(x, y)]);
   return c.a === 0 ? null : c;
+}
+
+/** Carimba o desenho centrado em x,y, sem sair da face (clip). */
+export function stampAt(s: Stroke, o: PaintOptions, x: number, y: number, clip: Rect | null) {
+  const def = STAMPS.find((d) => d.id === o.stamp) ?? STAMPS[0];
+  if (!clip) {
+    const L = layout(o.model);
+    const own = L.owner[idx(x, y)];
+    if (own < 0) return;
+    clip = L.infos[own].rect;
+  }
+  const h = def.rows.length, w = def.rows[0].length;
+  const x0 = x - Math.floor((w - 1) / 2), y0 = y - Math.floor((h - 1) / 2);
+  const cur = pack(o.color);
+  const cache: Record<string, Packed> = {};
+  def.rows.forEach((row, dy) =>
+    [...row].forEach((ch, dx) => {
+      if (ch === '.') return;
+      let c: Packed;
+      if (ch === 'c') c = cur;
+      else {
+        if (cache[ch] === undefined) {
+          const hex = def.legend[ch];
+          const n = parseInt(hex.slice(1), 16);
+          cache[ch] = pack({ r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 255 });
+        }
+        c = cache[ch];
+      }
+      const px = x0 + dx, py = y0 + dy;
+      if (inside(clip, px, py)) plot(s, o, px, py, c);
+    }));
 }

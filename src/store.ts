@@ -1,24 +1,32 @@
 import { create } from 'zustand';
 import type { RGBA } from './skin/document';
-import type { ToolId } from './skin/tools';
+import type { StampId, ToolId } from './skin/tools';
 import type { Layer, PartId, Rect } from './skin/layout';
 import type { Pose } from './skin/model3d';
 import { lsGet, lsSet } from './storage';
 
 export type ViewMode = 'both' | '3d' | '2d';
 export type Theme = 'system' | 'light' | 'dark';
-export type Modal = null | 'gallery' | 'export' | 'projects' | 'help' | 'onboarding';
+export type Modal = null | 'gallery' | 'export' | 'projects' | 'help' | 'onboarding' | 'parents' | 'colors';
+export type Mode = 'kid' | 'pro';
 
 export interface HoverInfo { x: number; y: number; clip: Rect | null; src: '2d' | '3d' }
 
 interface Prefs {
   tool: ToolId; size: number; mirror: boolean; noise: number; theme: Theme;
   recent: string[]; grid: boolean; paint3d: boolean; pose: Pose;
+  mode: Mode; sound: boolean; voice: boolean; stamp: StampId;
 }
 
 const savedPrefs = lsGet<Partial<Prefs>>('prefs', {});
 
 export interface AppState {
+  mode: Mode;
+  sound: boolean;
+  voice: boolean;
+  stamp: StampId;
+  painted: boolean;
+  celebrate: number;
   tool: ToolId;
   prevTool: ToolId;
   color: RGBA;
@@ -52,7 +60,13 @@ export interface AppState {
 let toastId = 0;
 
 export const useApp = create<AppState>((set, get) => ({
-  tool: savedPrefs.tool ?? 'pencil',
+  mode: savedPrefs.mode ?? 'kid',
+  sound: savedPrefs.sound ?? true,
+  voice: savedPrefs.voice ?? true,
+  stamp: savedPrefs.stamp ?? 'heart',
+  painted: false,
+  celebrate: 0,
+  tool: savedPrefs.tool ?? (savedPrefs.mode === 'pro' ? 'pencil' : 'brush'),
   prevTool: 'pencil',
   color: { r: 217, g: 117, b: 43, a: 255 },
   size: savedPrefs.size ?? 2,
@@ -99,9 +113,11 @@ export function rgbaKey(c: RGBA) {
 // salva preferências
 useApp.subscribe((s, p) => {
   if (s.tool !== p.tool || s.size !== p.size || s.mirror !== p.mirror || s.noise !== p.noise || s.theme !== p.theme ||
-      s.recent !== p.recent || s.grid !== p.grid || s.paint3d !== p.paint3d || s.pose !== p.pose) {
+      s.recent !== p.recent || s.grid !== p.grid || s.paint3d !== p.paint3d || s.pose !== p.pose ||
+      s.mode !== p.mode || s.sound !== p.sound || s.voice !== p.voice || s.stamp !== p.stamp) {
     const prefs: Prefs = { tool: s.tool === 'picker' ? s.prevTool : s.tool, size: s.size, mirror: s.mirror, noise: s.noise,
-      theme: s.theme, recent: s.recent, grid: s.grid, paint3d: s.paint3d, pose: s.pose };
+      theme: s.theme, recent: s.recent, grid: s.grid, paint3d: s.paint3d, pose: s.pose,
+      mode: s.mode, sound: s.sound, voice: s.voice, stamp: s.stamp };
     lsSet('prefs', prefs);
   }
 });

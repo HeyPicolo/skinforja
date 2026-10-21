@@ -47,6 +47,7 @@ export function renameProject(id: string, name: string) {
 export async function openProject(p: Project) {
   const r = await importSkinDataURL(p.png);
   doc.load(r.pixels, p.model);
+  doc.setOriginal();
   useApp.setState({ skinName: p.name, projectId: p.id });
 }
 
@@ -87,6 +88,7 @@ export async function restoreAutosave(): Promise<boolean> {
   try {
     const r = await importSkinDataURL(a.png);
     doc.load(r.pixels, a.model);
+    doc.setOriginal();
     useApp.setState({ skinName: a.name || 'Minha skin', projectId: a.projectId ?? null });
     return true;
   } catch {
