@@ -2,7 +2,7 @@
 // POST /api/sync  { action: 'login' | 'push', name, pin, data? }
 import { get, put } from '@vercel/blob';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { EMPTY_DATA, mergeData, sanitize, type SyncData } from '../src/sync-merge';
+import { EMPTY_DATA, mergeData, sanitize, type SyncData } from '../src/sync-merge.js';
 
 interface UserRecord {
   v: 1;
