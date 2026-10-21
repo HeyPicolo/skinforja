@@ -312,3 +312,10 @@
 
 /* diálogos de adulto abertos dentro do modo infantil voltam à fonte e seleção normais */
 .kid .backdrop { font-family: var(--font-body); -webkit-user-select: text; user-select: text; }
+
+/* cores recentes */
+.k-recent-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; height: 30px; align-self: center; }
+.k-recent-line { flex: 1; height: 4px; border-radius: 2px; background: var(--k-ink); opacity: 0.25; }
+.crayon-slot { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px dashed rgba(43, 45, 66, 0.25); }
+.k-colors { grid-auto-rows: auto; }
+.k-colors > .kbtn.crayon, .k-colors > .crayon-slot { height: var(--k-btn); width: var(--k-btn); }

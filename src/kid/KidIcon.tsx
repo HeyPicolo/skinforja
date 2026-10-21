@@ -481,6 +481,23 @@ const ICONS: Record<string, IconDef> = {
     ],
     legend: { K, r: '#ff4d6d', w: '#ffc2d1' },
   },
+  clock: {
+    rows: [
+      '...KKKKKK...',
+      '..KwwwwwwK..',
+      '.KwwwKwwwwK.',
+      'KwwwwKwwwwwK',
+      'KwwwwKwwwwwK',
+      'KwwwwKKKKwwK',
+      'KwwwwwwwwwwK',
+      'KwwwwwwwwwwK',
+      '.KwwwwwwwwK.',
+      '..KwwwwwwK..',
+      '...KKKKKK...',
+      '............',
+    ],
+    legend: { K, w: '#fff2a8' },
+  },
   trash: {
     rows: [
       '....KKKK....',

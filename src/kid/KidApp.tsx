@@ -15,9 +15,9 @@ import { ExportDialog } from '../components/ExportDialog';
 import { ProjectsDialog } from '../components/ProjectsDialog';
 
 /** Botão grande do modo infantil: toca um som e fala o nome. */
-export function KBtn({ label, onPress, children, className = '', pressed, sound = 'tap', speak = true, style }: {
+export function KBtn({ label, onPress, children, className = '', pressed, sound = 'tap', speak = true, speakAs, style }: {
   label: string; onPress?: () => void; children: ReactNode; className?: string; pressed?: boolean;
-  sound?: keyof typeof sfx | null; speak?: boolean; style?: React.CSSProperties;
+  sound?: keyof typeof sfx | null; speak?: boolean; speakAs?: string; style?: React.CSSProperties;
 }) {
   return (
     <button
@@ -28,7 +28,7 @@ export function KBtn({ label, onPress, children, className = '', pressed, sound 
       style={style}
       onClick={() => {
         if (sound) sfx[sound]();
-        if (speak) say(label);
+        if (speak) say(speakAs ?? label);
         onPress?.();
       }}
     >
@@ -162,7 +162,11 @@ function Tools() {
     <nav className="k-tools" aria-label="Ferramentas">
       <div className="k-toollist">
         {KID_TOOLS.map((t) => (
-          <KBtn key={t.id} label={t.say} pressed={tool === t.id} sound="select" onPress={() => setTool(t.id)}>
+          <KBtn
+            key={t.id} label={t.say} pressed={tool === t.id} sound={tool === t.id ? 'tap' : 'select'}
+            speakAs={tool === t.id ? 'Sem ferramenta' : t.say}
+            onPress={() => setTool(tool === t.id ? 'none' : t.id)}
+          >
             <KidIcon name={t.icon} size={44} color={hex} />
           </KBtn>
         ))}
@@ -181,18 +185,21 @@ function Crayons() {
   const set = useApp((s) => s.set);
   const tool = useApp((s) => s.tool);
   const setTool = useApp((s) => s.setTool);
+  const recent = useApp((s) => s.recent);
   const cur = rgbaKey(color);
   const inPalette = CRAYONS.some((c) => c.hex === cur);
+  const choose = (hex: string) => {
+    setColor(hexColor(hex), true);
+    if (tool === 'eraser' || tool === 'picker' || tool === 'none') setTool('brush');
+  };
+  const nameOf = (hex: string) => CRAYONS.find((c) => c.hex === hex)?.name ?? 'Cor';
   return (
     <aside className="k-colors" aria-label="Cores">
       {CRAYONS.map((c) => (
         <KBtn
           key={c.hex} label={c.name} pressed={cur === c.hex} className="crayon" sound="select"
           style={{ ['--c' as string]: c.hex }}
-          onPress={() => {
-            setColor(hexColor(c.hex), true);
-            if (tool === 'eraser' || tool === 'picker') setTool('brush');
-          }}
+          onPress={() => choose(c.hex)}
         >
           <span className="blob" />
         </KBtn>
@@ -203,6 +210,20 @@ function Crayons() {
       <KBtn label="Mais cores" className="crayon more" sound="select" onPress={() => set({ modal: 'colors' })}>
         <KidIcon name="rainbow" size={40} />
       </KBtn>
+      <div className="k-recent-head" role="presentation" aria-label="Cores recentes">
+        <span className="k-recent-line" /><KidIcon name="clock" size={26} /><span className="k-recent-line" />
+      </div>
+      {recent.slice(0, 6).map((h) => (
+        <KBtn
+          key={'r' + h} label={nameOf(h)} pressed={cur === h} className="crayon recent" sound="select"
+          style={{ ['--c' as string]: h }} onPress={() => choose(h)}
+        >
+          <span className="blob" />
+        </KBtn>
+      ))}
+      {Array.from({ length: Math.max(0, 3 - recent.length) }, (_, i) => (
+        <span key={'e' + i} className="crayon-slot" aria-hidden="true" />
+      ))}
     </aside>
   );
 }

@@ -134,7 +134,7 @@ export function ParentArea() {
         </header>
         <div className="dialog-body">
           <p className="dialog-lead">
-            A criança pinta tocando no boneco, escolhe cores à direita e ferramentas à esquerda. Cada botão fala o próprio nome.
+            A criança pinta tocando no boneco, escolhe cores à direita e ferramentas à esquerda. Cada botão fala o próprio nome em inglês. Tocar de novo na ferramenta escolhida tira a seleção (aí o toque no boneco só gira).
             Para chegar aqui, segure o cadeado por 2 segundos.
           </p>
           <div className="pa-grid">
@@ -148,7 +148,7 @@ export function ParentArea() {
           />
           <div className="pa-settings">
             <label className="pa-row"><input id="pa-som" type="checkbox" checked={sound} onChange={(e) => set({ sound: e.target.checked })} /> Sons</label>
-            <label className="pa-row"><input id="pa-voz" type="checkbox" checked={voice} onChange={(e) => set({ voice: e.target.checked })} /> Voz que fala o nome dos botões</label>
+            <label className="pa-row"><input id="pa-voz" type="checkbox" checked={voice} onChange={(e) => set({ voice: e.target.checked })} /> Voz que fala o nome dos botões (em inglês)</label>
             <div className="pa-row">
               <span>Braços do personagem</span>
               <div className="segmented small" role="radiogroup" aria-label="Modelo do braço">

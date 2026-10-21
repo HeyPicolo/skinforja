@@ -51,6 +51,7 @@ export function beginPaint(x: number, y: number, clip: Rect | null, mods: { alt?
   const app = useApp.getState();
   let tool = app.tool;
   if (mods.alt) tool = 'picker';
+  if (tool === 'none') return;
   if (tool === 'picker') {
     pick(x, y);
     if (!mods.alt) app.setTool(app.prevTool === 'picker' ? 'pencil' : app.prevTool);

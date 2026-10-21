@@ -3,7 +3,7 @@ import { pack, unpack, shade, TRANSPARENT, type RGBA, type Stroke, type Packed }
 
 export type ToolId =
   | 'pencil' | 'brush' | 'eraser' | 'fill' | 'picker'
-  | 'noise' | 'lighten' | 'darken' | 'line' | 'rect' | 'stamp';
+  | 'noise' | 'lighten' | 'darken' | 'line' | 'rect' | 'stamp' | 'none';
 
 export interface ToolDef { id: ToolId; label: string; key: string; hint: string }
 

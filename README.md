@@ -19,10 +19,11 @@ Para publicar em qualquer hospedagem estática (Vercel, Netlify, GitHub Pages), 
 
 Feito para crianças pequenas que ainda não leem, usando iPad:
 
-- Tudo por figuras grandes; cada botão **fala o próprio nome** (voz em português) e faz um som.
+- Tudo por figuras grandes; cada botão **fala o próprio nome em inglês** e faz um som.
 - Pinta tocando direto no boneco, que fica em cima de um bloco de grama. Pinta "o que se vê": se tem roupa por cima, pinta a roupa.
 - Ferramentas: pincel (3 tamanhos), balde (tolerante às texturas), carimbos (coração, estrela, olhos, sorriso, flor, raio, bolinhas, quadrado), purpurina, borracha (volta à cor original do modelo) e pegar cor. Borboleta = espelho.
-- Giz de cera com 18 cores + arco-íris com mais 72 cores.
+- Giz de cera com 18 cores + arco-íris com mais 72 cores. Embaixo, as 6 cores usadas por último.
+- Tocar de novo na ferramenta escolhida tira a seleção; sem ferramenta, arrastar no boneco só gira.
 - Botões para girar, aproximar, ver o mapa 2D e fazer o boneco dançar.
 - Coração guarda a skin (com confete). A galeria abre por figuras: patinha, monstro, pessoa, coração (minhas skins) e folha em branco.
 - **Área dos adultos**: segure o cadeado por 2 segundos. Lá ficam exportar (PNG/.mcpack), importar, gerenciar skins guardadas, som, voz, modelo do braço e o editor avançado.

@@ -65,12 +65,50 @@ export const sfx = {
   save: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.1, delay: i * 0.08 })),
 };
 
-// ---------- voz ----------
+// ---------- voz (em inglês) ----------
+const EN: Record<string, string> = {
+  // ferramentas e tamanhos
+  'Pincel': 'Brush', 'Balde de tinta': 'Paint bucket', 'Carimbos': 'Stamps', 'Purpurina': 'Glitter',
+  'Borracha': 'Eraser', 'Pegar cor': 'Color picker', 'Espelho ligado': 'Mirror on', 'Espelho desligado': 'Mirror off',
+  'Pequeno': 'Small', 'Médio': 'Medium', 'Grande': 'Big', 'Sem ferramenta': 'No tool',
+  // carimbos
+  'Coração': 'Heart', 'Estrela': 'Star', 'Olhos': 'Eyes', 'Sorriso': 'Smile', 'Flor': 'Flower',
+  'Raio': 'Lightning', 'Bolinhas': 'Dots', 'Quadrado': 'Square',
+  // topo e palco
+  'Personagens': 'Characters', 'Guardar': 'Save', 'Guardado!': 'Saved!', 'Desfazer': 'Undo', 'Refazer': 'Redo',
+  'Som ligado': 'Sound on', 'Som desligado': 'Sound off', 'Peça ajuda a um adulto': 'Ask a grown-up for help',
+  'Girar': 'Turn', 'Dançar': 'Dance', 'Parar': 'Stop', 'Aproximar': 'Zoom in', 'Afastar': 'Zoom out',
+  'Mapa da skin': 'Skin map', 'Mais cores': 'More colors', 'Cores recentes': 'Recent colors', 'Fechar': 'Close',
+  'Peguei a cor!': 'Got the color!',
+  // galeria
+  'Animais': 'Animals', 'Monstros': 'Monsters', 'Pessoas': 'People', 'Minhas skins': 'My skins', 'Começar do zero': 'Start from scratch',
+  'Raposa': 'Fox', 'Gato listrado': 'Striped cat', 'Panda': 'Panda', 'Zumbi': 'Zombie', 'Esqueleto pirata': 'Pirate skeleton',
+  'Robô sentinela': 'Guard robot', 'Cavaleiro': 'Knight', 'Mago': 'Wizard', 'Astronauta': 'Astronaut', 'Aventureiro': 'Adventurer',
+  'Base neutra': 'Plain skin', 'Em branco': 'Blank', 'Minha skin': 'My skin',
+  // cores
+  'Vermelho': 'Red', 'Laranja': 'Orange', 'Amarelo': 'Yellow', 'Verde-limão': 'Lime green', 'Verde': 'Green',
+  'Verde-escuro': 'Dark green', 'Azul-claro': 'Light blue', 'Azul': 'Blue', 'Azul-escuro': 'Dark blue', 'Roxo': 'Purple',
+  'Rosa': 'Pink', 'Marrom': 'Brown', 'Pele clara': 'Light skin', 'Pele morena': 'Tan skin', 'Pele escura': 'Dark skin',
+  'Branco': 'White', 'Cinza': 'Gray', 'Preto': 'Black', 'Cor escolhida': 'Your color', 'Cor': 'Color',
+};
+
+/** Traduz o rótulo para o inglês falado (inclui nomes como "Raposa (meu)" e "Minha skin 3"). */
+export function toEnglish(text: string): string {
+  if (EN[text]) return EN[text];
+  const own = text.match(/^(.*) \(meu\)$/);
+  if (own) return 'My ' + (EN[own[1]] ?? own[1]).toLowerCase();
+  const num = text.match(/^Minha skin (\d+)$/);
+  if (num) return 'My skin ' + num[1];
+  return text;
+}
+
 let voice: SpeechSynthesisVoice | null = null;
 function pickVoice() {
   try {
     const vs = window.speechSynthesis?.getVoices() ?? [];
-    voice = vs.find((v) => v.lang === 'pt-BR') ?? vs.find((v) => v.lang.startsWith('pt')) ?? null;
+    const en = vs.filter((v) => v.lang.replace('_', '-').startsWith('en'));
+    voice = en.find((v) => v.lang.replace('_', '-') === 'en-US' && /samantha|google us|aria|jenny/i.test(v.name))
+      ?? en.find((v) => v.lang.replace('_', '-') === 'en-US') ?? en[0] ?? null;
   } catch { voice = null; }
 }
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -84,8 +122,8 @@ export function say(text: string) {
     const s = window.speechSynthesis;
     if (!s) return;
     s.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pt-BR';
+    const u = new SpeechSynthesisUtterance(toEnglish(text));
+    u.lang = 'en-US';
     if (voice) u.voice = voice;
     u.rate = 1.0;
     u.pitch = 1.15;

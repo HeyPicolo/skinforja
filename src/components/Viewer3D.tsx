@@ -181,7 +181,7 @@ export function Viewer3D({ kid = false }: { kid?: boolean }) {
         return;
       }
       const s = useApp.getState();
-      if (e.button !== 0 || (!s.paint3d && !kid)) return;
+      if (e.button !== 0 || (!s.paint3d && !kid) || s.tool === 'none') return;
       strokeLayer = null;
       const hit = castAt(e);
       if (!hit) return;
