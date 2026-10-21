@@ -49,6 +49,11 @@ export interface AppState {
   toast: { id: number; text: string; action?: { label: string; run: () => void } } | null;
   panelOpen: boolean;
   savedAt: number | null;
+  syncName: string | null;
+  syncState: 'idle' | 'syncing' | 'ok' | 'error';
+  syncError: string | null;
+  syncAt: number | null;
+  syncRev: number;
 
   set: (p: Partial<AppState>) => void;
   setTool: (t: ToolId) => void;
@@ -88,6 +93,11 @@ export const useApp = create<AppState>((set, get) => ({
   toast: null,
   panelOpen: false,
   savedAt: null,
+  syncName: null,
+  syncState: 'idle',
+  syncError: null,
+  syncAt: null,
+  syncRev: 0,
 
   set: (p) => set(p),
   setTool: (t) => {

@@ -19,6 +19,7 @@ import { ExportDialog } from './components/ExportDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
 import { HelpDialog, Onboarding } from './components/HelpDialogs';
 import { KidApp } from './kid/KidApp';
+import { startSync } from './sync';
 
 function useTheme() {
   const theme = useApp((s) => s.theme);
@@ -41,6 +42,8 @@ export async function importFile(file: File) {
     doc.setOriginal();
     const name = file.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Skin importada';
     app.set({ skinName: name, projectId: null, modal: null });
+    // a skin importada também vai para "Minhas skins" (e para a conta, se houver)
+    saveCurrentAsProject();
     const extra = r.converted ? ' Formato antigo 64×32 convertido para 64×64.' : r.model === 'slim' ? ' Braços slim detectados.' : '';
     app.showToast(`"${name}" importada.${extra}`, { label: 'Desfazer', run: () => doc.undo() });
   } catch (e) {
@@ -199,6 +202,7 @@ export function App() {
         set({ skinName: t.name + ' (meu)' });
       }
       startAutosave();
+      startSync();
       setReady(true);
     })();
   }, [set]);

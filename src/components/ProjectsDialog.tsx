@@ -5,6 +5,7 @@ import { renderThumb } from '../skin/thumbs';
 import { useApp } from '../store';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
+import { AccountBox } from './AccountBox';
 
 function ProjectThumb({ p }: { p: Project }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -26,6 +27,8 @@ export function ProjectsDialog() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const refresh = () => setList(listProjects());
+  const syncRev = useApp((s) => s.syncRev);
+  useEffect(() => { setList(listProjects()); }, [syncRev]);
 
   const saveNow = () => {
     const p = saveCurrentAsProject();
@@ -35,8 +38,9 @@ export function ProjectsDialog() {
 
   return (
     <Dialog title="Minhas skins" onClose={() => set({ modal: null })} wide>
+      <AccountBox />
       <div className="dialog-actions-row">
-        <p className="dialog-lead">Ficam guardadas neste navegador. Para levar a outro aparelho, exporte em PNG.</p>
+        <p className="dialog-lead">Ficam guardadas neste navegador e, se você entrar numa conta, em todos os aparelhos dela.</p>
         <button type="button" className="btn primary" onClick={saveNow} data-autofocus>
           <Icon name="save" /> {projectId ? 'Salvar alterações' : 'Salvar skin atual'}
         </button>

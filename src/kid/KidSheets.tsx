@@ -12,6 +12,7 @@ import { KidIcon } from './KidIcon';
 import { sfx, say } from './sound';
 import { MORE_COLORS, hexColor } from './kidData';
 import { KBtn } from './KidApp';
+import { AccountBox } from '../components/AccountBox';
 
 function Sheet({ children, label, onClose }: { children: React.ReactNode; label: string; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +55,9 @@ export function KidGallery() {
   const set = useApp((s) => s.set);
   const close = () => set({ modal: null });
   const [tab, setTab] = useState<Tab>(() => (listProjects().length ? 'minhas' : 'animais'));
-  const projects = useMemo(listProjects, []);
+  const syncRev = useApp((s) => s.syncRev);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const projects = useMemo(listProjects, [syncRev]);
   const items: Template[] = tab === 'basico' ? STARTERS : TEMPLATES.filter((t) => t.category === tab);
 
   const pickTemplate = (t: Template) => {
@@ -124,6 +127,11 @@ export function ParentArea() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [model, setM] = useState(doc.model);
   const close = () => set({ modal: null });
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') set({ modal: null }); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [set]);
 
   return (
     <div className="backdrop" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
@@ -137,6 +145,7 @@ export function ParentArea() {
             A criança pinta tocando no boneco, escolhe cores à direita e ferramentas à esquerda. Cada botão fala o próprio nome em inglês. Tocar de novo na ferramenta escolhida tira a seleção (aí o toque no boneco só gira).
             Para chegar aqui, segure o cadeado por 2 segundos.
           </p>
+          <AccountBox />
           <div className="pa-grid">
             <button type="button" className="btn primary" onClick={() => set({ modal: 'export' })}>Exportar para o Minecraft</button>
             <button type="button" className="btn" onClick={() => fileRef.current?.click()}>Importar skin (PNG)</button>

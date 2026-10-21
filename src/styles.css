@@ -685,3 +685,14 @@ button.tpl-card:hover .thumb-img, .tpl-card .thumb:hover .thumb-img { transform:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* conta e sincronização */
+.account-box { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
+.account-box h3 { font-size: 15px; }
+.account-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.account-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.account-form .field { flex: 1; min-width: 140px; }
+.sync-pill { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.sync-pill.ok { color: #1f7a45; border-color: #9fd6b4; background: #e6f6ec; }
+.sync-pill.error { color: var(--warn-fg); background: var(--warn-bg); border-color: transparent; }
+.sync-pill.syncing { color: var(--accent); }

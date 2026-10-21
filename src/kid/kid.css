@@ -319,3 +319,5 @@
 .crayon-slot { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px dashed rgba(43, 45, 66, 0.25); }
 .k-colors { grid-auto-rows: auto; }
 .k-colors > .kbtn.crayon, .k-colors > .crayon-slot { height: var(--k-btn); width: var(--k-btn); }
+.k-colors > .crayon-slot { width: 100%; height: auto; aspect-ratio: 1; }
+.parent-area .segmented b { white-space: nowrap; }

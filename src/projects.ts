@@ -12,9 +12,17 @@ export function listProjects(): Project[] {
   return lsGet<Project[]>('projects', []).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+let changeHook: () => void = () => {};
+/** Avisado sempre que algo guardado muda neste aparelho (usado pela sincronização). */
+export function setChangeHook(fn: () => void) { changeHook = fn; }
+
 function writeProjects(list: Project[]) {
-  return lsSet('projects', list);
+  const ok = lsSet('projects', list);
+  changeHook();
+  return ok;
 }
+
+export function listDeleted(): Record<string, number> { return lsGet<Record<string, number>>('deleted', {}); }
 
 export function saveCurrentAsProject(): Project | null {
   const s = useApp.getState();
@@ -34,6 +42,7 @@ export function saveCurrentAsProject(): Project | null {
 }
 
 export function deleteProject(id: string) {
+  lsSet('deleted', { ...listDeleted(), [id]: Date.now() });
   writeProjects(listProjects().filter((p) => p.id !== id));
   if (useApp.getState().projectId === id) useApp.setState({ projectId: null });
 }
@@ -41,7 +50,7 @@ export function deleteProject(id: string) {
 export function renameProject(id: string, name: string) {
   const list = listProjects();
   const p = list.find((x) => x.id === id);
-  if (p) { p.name = name; writeProjects(list); }
+  if (p) { p.name = name; p.updatedAt = Date.now(); writeProjects(list); }
 }
 
 export async function openProject(p: Project) {
@@ -62,24 +71,37 @@ export function duplicateProject(p: Project) {
 
 let timer = 0;
 let lastSaved = 0;
+/** Momento da última mudança real (pintura, nome) — é o que decide qual aparelho tem o trabalho mais novo. */
+let lastChange = 0;
+
+/** Grava agora se houver um salvamento automático pendente. */
+export function flushAutosave() {
+  if (!timer) return;
+  window.clearTimeout(timer);
+  timer = 0;
+  autosaveNow();
+}
 
 export function autosaveNow() {
   const s = useApp.getState();
-  const data: Autosave = { name: s.skinName, model: doc.model, png: pixelsToDataURL(doc.px), projectId: s.projectId, savedAt: Date.now() };
+  timer = 0;
+  const data: Autosave = { name: s.skinName, model: doc.model, png: pixelsToDataURL(doc.px), projectId: s.projectId, savedAt: lastChange || Date.now() };
   if (lsSet('autosave', data)) {
     lastSaved = data.savedAt;
     useApp.setState({ savedAt: lastSaved });
+    changeHook();
   }
 }
 
 export function startAutosave() {
   const schedule = () => {
+    lastChange = Date.now();
     window.clearTimeout(timer);
     timer = window.setTimeout(autosaveNow, 700);
   };
   doc.subscribe(schedule);
   useApp.subscribe((s, p) => { if (s.skinName !== p.skinName || s.projectId !== p.projectId) schedule(); });
-  window.addEventListener('pagehide', autosaveNow);
+  window.addEventListener('pagehide', flushAutosave);
 }
 
 export async function restoreAutosave(): Promise<boolean> {
@@ -89,6 +111,7 @@ export async function restoreAutosave(): Promise<boolean> {
     const r = await importSkinDataURL(a.png);
     doc.load(r.pixels, a.model);
     doc.setOriginal();
+    lastChange = a.savedAt || 0;
     useApp.setState({ skinName: a.name || 'Minha skin', projectId: a.projectId ?? null });
     return true;
   } catch {

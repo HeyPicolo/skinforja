@@ -29,6 +29,18 @@ Feito para crianças pequenas que ainda não leem, usando iPad:
 - **Área dos adultos**: segure o cadeado por 2 segundos. Lá ficam exportar (PNG/.mcpack), importar, gerenciar skins guardadas, som, voz, modelo do braço e o editor avançado.
 - No iPad, use "Compartilhar › Adicionar à Tela de Início" para abrir em tela cheia como um app.
 
+## Conta e sincronização
+
+Na área dos adultos (ou em "Minhas skins" no editor avançado), entre com **nome + PIN** (4 a 8 números).
+Se o nome ainda não existir, a conta é criada com aquele PIN e as skins do aparelho sobem para ela.
+Em qualquer outro aparelho, entre com o mesmo nome e PIN: as skins guardadas, as importadas e o desenho em andamento
+ficam iguais. A sincronização acontece sozinha depois de cada mudança, ao voltar para o app e a cada 45 segundos.
+
+- Servidor: função `api/sync.ts` na Vercel, com os dados de cada conta num **Blob privado** (`users/<nome>.json`).
+- O PIN é guardado com hash (scrypt). Depois de 5 PINs errados a conta fica bloqueada por 1 minuto.
+- Se duas versões da mesma skin existirem, vale a mais nova; skins apagadas num aparelho somem nos outros.
+- A página publicada dentro do Claude não sincroniza (só o site na Vercel tem o servidor).
+
 ## Editor avançado
 
 - **Editor**: boneco 3D (girar, zoom, pintar direto no modelo) ao lado do mapa 2D da textura 64×64 com grade, zoom e contorno de cada face. Mostrar/ocultar partes do corpo e as camadas Base/Externa. Prévia parado ou andando.
